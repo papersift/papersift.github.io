@@ -56,6 +56,37 @@ export const FIXTURE_PAPERS = [
     year: '2020',
     abstract: 'We study molecule embeddings for property prediction tasks.',
   },
+  {
+    // exact phrase "knowledge distillation"; has both "classification" and "calibration";
+    // co-authored by the two authors used in the and/or author tests
+    title: 'Knowledge Distillation for Medical Classification',
+    authors: 'Abhishek Singh Sambyal, Aleksei Tuilpin',
+    url: 'https://example.org/paper-7',
+    venue: 'MIDL 2024',
+    year: '2024',
+    abstract: 'Teacher models improve the calibration of student networks.',
+  },
+  {
+    // "knowledge" and "distillation" both present but NOT adjacent - phrase vs "and";
+    // "classification" without "calibration"; BibTeX-style "Last, First and Last, First"
+    // authors, as some ECCV/MICCAI entries are stored
+    title: 'Distillation of Domain Knowledge into Classification Pipelines',
+    authors: 'Tuilpin, Aleksei AND Doe, Alice',
+    url: 'https://example.org/paper-8',
+    venue: 'ISBI 2023',
+    year: '2023',
+    abstract: 'Expert priors guide the classifier.',
+  },
+  {
+    // "abhishek" and "sambyal" belong to two DIFFERENT authors here, so the
+    // name "abhishek sambyal" must not match this paper
+    title: 'Out-of-Distribution Detection Benchmarks',
+    authors: 'Abhishek Kumar, Priya Sambyal',
+    url: 'https://example.org/paper-9',
+    venue: 'MICCAI 2022',
+    year: '2022',
+    abstract: 'An ood benchmark suite for imaging models.',
+  },
 ];
 
 const FIXTURE_CONFIG = { conferences: [{ id: 'fixture' }] };

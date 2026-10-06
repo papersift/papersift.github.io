@@ -33,32 +33,48 @@ A high-performance, monochromatic research search engine for AI/ML and medical i
 
 ## 🔍 Search Syntax
 
-PaperSift supports advanced query syntax for precision literature discovery:
+Queries use two explicit operators, `and` and `or`. Keywords are matched against paper
+**titles** and **abstracts**; the `author:` prefix matches author names instead.
 
-### General Search
-By default, keywords search through paper **titles** and **abstracts**.
-- `diffusion models` — Finds papers containing both words in any order.
-- `transformer or vision` — Finds papers containing either term.
+| Write | Meaning |
+|---|---|
+| a space | joins words into one unit: an exact **phrase** for keywords, one person's **name** for authors |
+| `and` | both sides must match |
+| `or` | either side may match (`and` groups first: `a or b and c` = `a`, or `b` with `c`) |
+| `author:` | from here on, words that are someone's name are read as authors; the rest stay topics |
+
+Commas and semicolons have no special meaning. Name detection uses every word that appears in an
+author name in the archive, so a topic that is also a surname (e.g. `gan`, `brain`) is read as a
+name after `author:` — put it before `author:` to keep it a topic: `gan and author: hinton`.
+
+### Keyword Search
+- `knowledge distillation` — Papers containing that exact phrase.
+- `classification and calibration` — Papers mentioning both words anywhere in the title/abstract.
+- `classification or calibration` — Papers mentioning either word.
 
 ### Author Search
-Use the `author:` prefix to target specific researchers or labs. Commas separate author names; a
-semicolon separates the author clause from the keyword clause.
-- `author: sambyal` — Papers where "sambyal" is an author.
-- `author: doe, smith` — Papers co-authored by "doe" and "smith" (Nested AND search).
-- `author: Hinton; deep learning` — Papers by "Hinton" containing "deep learning" in the title/abstract.
-- `calibration; author: sambyal, usma` — Same thing with the clauses reversed; either order works.
+- `author: sambyal` — Papers with an author whose name contains "sambyal".
+- `author: abhishek sambyal` — Papers by that one person (a middle name in between is fine).
+- `author: aleksei tiulpin or abhishek sambyal` — Papers by either person.
+- `author: aleksei tiulpin and abhishek sambyal` — Papers co-authored by both.
+- `author: abhishek and bathula and calibration` — Calibration papers co-authored by both.
+- `author: hinton and deep learning` — Papers by Hinton containing the phrase "deep learning".
+- `calibration and author: sambyal` — Topic first; either order works.
 
 ---
 
 ## 🛠️ Installation & Development
 
 ### Local Development
-To run the search engine locally with the dynamic backend:
+The site is fully static, so any static file server works. From the repo root:
 ```bash
 python3 -m http.server 8000
-or
-python3 server.py
 ```
+Then open <http://localhost:8000>. Opening `index.html` directly (`file://`) won't work: the page
+uses ES modules and `fetch()`es `data/*.json`, which browsers block for local files.
+
+`python3 server.py` also serves the site, plus an optional Python JSON API (`/api/search`); the
+static site doesn't use that API.
 
 ### Data Synchronization
 The database is maintained via a unified synchronization pipeline.
@@ -94,8 +110,8 @@ Local equivalent, if ever needed: `python3 scripts/export_static.py --stats-only
 Covers both search implementations in this repo:
 
 - `tests/js/` — tests `js/core.js` (`extractSearchTerms`, `fetchResults`), the real
-  client-side search used by the static site. This is where `author:`, AND/OR,
-  and title/abstract keyword matching are actually implemented.
+  client-side search used by the static site. This is where `author:`, `and`/`or`,
+  phrase matching, and title/abstract keyword matching are actually implemented.
 - `tests/python/` — tests `api/search.py` (`run_search`), used only by the local-dev
   server (`server.py`). It's a simpler implicit-AND matcher with no `author:` prefix
   and no real OR support; several tests there intentionally pin down that narrower

@@ -262,7 +262,9 @@ let results = [], idx = 0, terms = [], authorSub = [], observer = null;
 
 function renderNext(container) {
   if (idx >= results.length) return;
-  const chunk = results.slice(idx, idx + CHUNK), re = terms.length ? new RegExp(`\\b(${terms.map(escapeRegex).join('|')})\\b`, 'gi') : null;
+  // Longest phrases first so "deep learning" wins over "deep"; phrase words may be split by any whitespace.
+  const phrases = [...terms].sort((a, b) => b.length - a.length).map(t => t.split(' ').map(escapeRegex).join('\\s+'));
+  const chunk = results.slice(idx, idx + CHUNK), re = terms.length ? new RegExp(`\\b(${phrases.join('|')})\\b`, 'gi') : null;
   const authorRe = authorSub.length ? new RegExp(`(${authorSub.map(escapeRegex).join('|')})`, 'gi') : null;
   const frag = document.createDocumentFragment();
   chunk.forEach(p => frag.appendChild(createCard(p, re, authorRe)));
@@ -286,14 +288,28 @@ function renderNext(container) {
   if (window.renderMathInElement) newEls.forEach(el => window.renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }], throwOnError: false }));
 }
 
-function generateSummary(terms, isOr, author) {
-  const joiner = isOr ? 'or' : 'and';
-  return (author ? ` <span class="opacity-70">by</span> <span class="font-bold">${author}</span>` : '') +
-    (terms.length ? ` <span class="opacity-70">${author ? 'and' : 'with'}</span> ${terms.map(t => `<span class="font-bold">${t}</span>`).join(` <span class="opacity-70 italic">${joiner}</span> `)}` : '');
+const escapeHtml = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/**
+ * Describe the parsed query so the reader sees how each word was read, e.g.
+ * "by abhishek and bathula with calibration or by smith".
+ */
+function generateSummary(groups) {
+  if (!groups.length) return '';
+  const op = w => ` <span class="opacity-70 italic">${w}</span> `;
+  const bold = s => `<span class="font-bold">${escapeHtml(s)}</span>`;
+  return ' ' + groups.map(g => {
+    const names = g.filter(u => u.author).map(u => bold(u.author.join(' ')));
+    const phrases = g.filter(u => !u.author).map(u => bold(u.phrase));
+    return [names.length && `<span class="opacity-70">by</span> ${names.join(op('and'))}`,
+            phrases.length && `<span class="opacity-70">with</span> ${phrases.join(op('and'))}`].filter(Boolean).join(' ');
+  }).join(op('or'));
 }
 
-export function renderResults(res, t, refs, isOr = false, author = null, sub = []) {
-  const { resultsList: list, resultsCount: count } = refs, summary = generateSummary(t, isOr, author);
+/** `parsed` is the query structure returned alongside fetchResults()' results. */
+export function renderResults(res, refs, parsed) {
+  const { groups, terms: t, authorSubTerms: sub } = parsed;
+  const { resultsList: list, resultsCount: count } = refs, summary = generateSummary(groups);
   if (!res.length) { count.innerHTML = `<span class="opacity-70">No matching papers — try fewer keywords or clearing a filter.</span>${summary}`; list.innerHTML = ''; return; }
   count.innerHTML = `<span class="opacity-70">Found</span> <span class="font-bold">${res.length.toLocaleString()}</span> <span class="opacity-70">papers</span>${summary}`;
   results = res; terms = t; authorSub = sub; idx = 0; list.innerHTML = '';

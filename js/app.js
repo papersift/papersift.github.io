@@ -1,4 +1,4 @@
-import { saveRecent, fetchResults, extractSearchTerms } from './core.js';
+import { saveRecent, fetchResults } from './core.js';
 import { renderResults, renderPills, transitionToResults, resetToHome, initializeFilters, updateFilterHighlights, startPurposeLoop } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -114,9 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
     domRefs.resultsCount.innerHTML = '<span class="italic opacity-60">Scanning archive...</span>';
     
     try {
-      const { results, activeVenues, activeYears } = await fetchResults(query, venues, years);
-      const { terms, isOrSearch, authorTerm, authorSubTerms } = extractSearchTerms(query);
-      
+      const { results, activeVenues, activeYears, parsed } = await fetchResults(query, venues, years);
+
       const counts = results.reduce((acc, p) => {
         if (p.year) acc.years[p.year] = (acc.years[p.year] || 0) + 1;
         if (p.venue) {
@@ -127,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return acc;
       }, { years: {}, venues: {} });
 
-      renderResults(results, terms, domRefs, isOrSearch, authorTerm, authorSubTerms);
+      renderResults(results, domRefs, parsed);
       updateFilterHighlights(activeVenues, activeYears, counts.years, counts.venues);
     } catch (err) {
       if (err.name === 'AbortError') return;

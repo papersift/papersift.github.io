@@ -7,135 +7,175 @@ import { installFetchMock } from './fixtures.mjs';
 installFetchMock();
 
 const titlesOf = (results) => results.map((r) => r.title).sort();
+const search = async (q) => titlesOf((await fetchResults(q)).results);
+
+const P1 = 'Deep CNN Segmentation of MRI Scans';
+const P2 = 'Calibration of Deep Neural Network Models';
+const P6 = 'Graph Neural Networks for Chemistry';
+const P7 = 'Knowledge Distillation for Medical Classification';
+const P8 = 'Distillation of Domain Knowledge into Classification Pipelines';
+const P9 = 'Out-of-Distribution Detection Benchmarks';
+
+// Parser tests pass their own author-name vocabulary; fetchResults() builds the
+// real one from the loaded papers.
+const NAMES = new Set(['aleksei', 'tuilpin', 'abhishek', 'singh', 'sambyal', 'smith', 'lee']);
+const parse = (q) => extractSearchTerms(q, NAMES).groups;
+const P = (phrase) => ({ phrase });
+const A = (...author) => ({ author });
 
 describe('extractSearchTerms', () => {
-  test('plain keyword query is treated as AND with no author term', () => {
-    const r = extractSearchTerms('cnn transformer');
-    assert.deepEqual(r.terms, ['cnn', 'transformer']);
-    assert.equal(r.isOrSearch, false);
-    assert.equal(r.authorTerm, null);
+  test('words joined by spaces form one phrase', () => {
+    const r = extractSearchTerms('knowledge distillation', NAMES);
+    assert.deepEqual(r.groups, [[P('knowledge distillation')]]);
+    assert.deepEqual(r.terms, ['knowledge distillation']);
     assert.deepEqual(r.authorSubTerms, []);
   });
 
-  test('author: prefix with nothing else yields an author term and no keywords', () => {
-    const r = extractSearchTerms('author: smith');
+  test('"or" splits into alternative groups', () => {
+    assert.deepEqual(parse('classification or calibration'), [[P('classification')], [P('calibration')]]);
+  });
+
+  test('"and" puts terms in the same group', () => {
+    assert.deepEqual(parse('classification and calibration'), [[P('classification'), P('calibration')]]);
+  });
+
+  test('"and" binds tighter than "or"', () => {
+    assert.deepEqual(parse('graph or classification and calibration'),
+      [[P('graph')], [P('classification'), P('calibration')]]);
+  });
+
+  test('"and"/"or" inside a word are not operators', () => {
+    assert.deepEqual(parse('android or order'), [[P('android')], [P('order')]]);
+  });
+
+  test('commas and semicolons carry no meaning', () => {
+    assert.deepEqual(parse('cnn, transformer'), [[P('cnn transformer')]]);
+    assert.deepEqual(parse('author: abhishek and sambyal; and calibration'),
+      parse('author: abhishek and sambyal and calibration'));
+  });
+
+  test('an author name keeps its words together', () => {
+    const r = extractSearchTerms('author: aleksei tuilpin or abhishek sambyal', NAMES);
+    assert.deepEqual(r.groups, [[A('aleksei', 'tuilpin')], [A('abhishek', 'sambyal')]]);
+    assert.deepEqual(r.authorSubTerms, ['aleksei', 'tuilpin', 'abhishek', 'sambyal']);
     assert.deepEqual(r.terms, []);
-    assert.equal(r.authorTerm, 'smith');
-    assert.deepEqual(r.authorSubTerms, ['smith']);
   });
 
-  test('a semicolon separates the author clause from the keyword clause', () => {
-    const r = extractSearchTerms('author: smith; segmentation');
-    assert.equal(r.authorTerm, 'smith');
-    assert.deepEqual(r.authorSubTerms, ['smith']);
-    assert.deepEqual(r.terms, ['segmentation']);
-    assert.equal(r.isOrSearch, false);
+  test('"and" between author names requires both', () => {
+    assert.deepEqual(parse('author: aleksei tuilpin and abhishek sambyal'),
+      [[A('aleksei', 'tuilpin'), A('abhishek', 'sambyal')]]);
   });
 
-  test('the clauses may be given in either order', () => {
-    const r = extractSearchTerms('calibration; author: smith');
-    assert.equal(r.authorTerm, 'smith');
-    assert.deepEqual(r.authorSubTerms, ['smith']);
-    assert.deepEqual(r.terms, ['calibration']);
-    assert.equal(r.isOrSearch, false);
+  test('after author:, words that are not anyone\'s name are read as topics', () => {
+    assert.deepEqual(parse('author: abhishek and smith and calibration'),
+      [[A('abhishek'), A('smith'), P('calibration')]]);
+    assert.deepEqual(parse('author: sambyal or graph neural networks'),
+      [[A('sambyal')], [P('graph neural networks')]]);
   });
 
-  test('a comma inside author: separates names, not keywords', () => {
-    const r = extractSearchTerms('author: sambyal, usma; classification');
-    assert.equal(r.authorTerm, 'sambyal, usma');
-    assert.deepEqual(r.authorSubTerms, ['sambyal', 'usma']);
-    assert.deepEqual(r.terms, ['classification']);
-    // the author comma must not put the keyword clause into OR mode
-    assert.equal(r.isOrSearch, false);
+  test('topics may come before author:', () => {
+    assert.deepEqual(parse('calibration and author: sambyal'), [[P('calibration'), A('sambyal')]]);
   });
 
-  test('"or" keyword triggers OR mode', () => {
-    const r = extractSearchTerms('cnn or transformer');
-    assert.equal(r.isOrSearch, true);
-    assert.deepEqual(r.terms, ['cnn', 'transformer']);
+  test('names are only names after author:', () => {
+    assert.deepEqual(parse('sambyal'), [[P('sambyal')]]);
   });
 
-  test('comma-separated keywords also trigger OR mode', () => {
-    const r = extractSearchTerms('cnn, transformer');
-    assert.equal(r.isOrSearch, true);
-    assert.deepEqual(r.terms, ['cnn', 'transformer']);
-  });
-
-  test('empty query yields no terms and no author', () => {
-    const r = extractSearchTerms('   ');
-    assert.deepEqual(r, { terms: [], isOrSearch: false, authorTerm: null, authorSubTerms: [] });
+  test('empty query yields nothing', () => {
+    assert.deepEqual(extractSearchTerms('   ', NAMES), { groups: [], terms: [], authorSubTerms: [] });
   });
 
   test('single-character terms are dropped', () => {
-    const r = extractSearchTerms('a cnn b');
-    assert.deepEqual(r.terms, ['cnn']);
+    assert.deepEqual(parse('a or cnn'), [[P('cnn')]]);
+  });
+});
+
+describe('fetchResults: keyword and/or', () => {
+  test('"or" returns papers with either term', async () => {
+    assert.deepEqual(await search('classification or calibration'), [P2, P7, P8].sort());
+  });
+
+  test('"and" returns papers with both terms in title or abstract', async () => {
+    // P7 has "classification" in the title and "calibration" in the abstract
+    assert.deepEqual(await search('classification and calibration'), [P7]);
+  });
+
+  test('a multi-word keyword is an exact phrase', async () => {
+    assert.deepEqual(await search('knowledge distillation'), [P7]);
+    // with "and" the words may appear anywhere, so P8 matches too
+    assert.deepEqual(await search('knowledge and distillation'), [P7, P8].sort());
+  });
+
+  test('"and" binds tighter than "or"', async () => {
+    assert.deepEqual(await search('graph or classification and calibration'), [P6, P7].sort());
+  });
+
+  test('cnn and/or transformer', async () => {
+    assert.deepEqual(await search('cnn and transformer'), [
+      P1,
+      'Transformer Networks for Visual Recognition',
+    ].sort());
+    assert.deepEqual(await search('cnn or transformer'), [
+      P1,
+      'Transformer Networks for Visual Recognition',
+      'Federated Learning Survey with CNN Backbones',
+    ].sort());
   });
 });
 
 describe('fetchResults: author search', () => {
   test('author: <name> returns only papers whose authors field contains the name', async () => {
-    const { results } = await fetchResults('author: smith');
-    assert.deepEqual(titlesOf(results), [
-      'Calibration of Deep Neural Network Models',
-      'Deep CNN Segmentation of MRI Scans',
-    ].sort());
+    assert.deepEqual(await search('author: smith'), [P1, P2].sort());
     // the "smith" distractor (word appears in title/abstract, not authors) must be excluded
-    assert.ok(!titlesOf(results).includes("Extending Smith's Loss Function for Robust Training"));
+    assert.ok(!(await search('author: smith')).includes("Extending Smith's Loss Function for Robust Training"));
   });
 
-  test('author: <name>; <keyword> narrows to papers matching both', async () => {
-    const { results } = await fetchResults('author: smith; segmentation');
-    assert.equal(results.length, 1);
-    assert.equal(results[0].title, 'Deep CNN Segmentation of MRI Scans');
+  test('"or" between names returns papers by either author', async () => {
+    assert.deepEqual(await search('author: aleksei tuilpin or abhishek sambyal'), [P7, P8].sort());
   });
 
-  test('<keyword>; author: <name> narrows the same way', async () => {
-    const { results } = await fetchResults('segmentation; author: smith');
-    assert.equal(results.length, 1);
-    assert.equal(results[0].title, 'Deep CNN Segmentation of MRI Scans');
+  test('"and" between names returns only co-authored papers', async () => {
+    assert.deepEqual(await search('author: aleksei tuilpin and abhishek sambyal'), [P7]);
+    assert.deepEqual(await search('author: smith and lee'), [P1]);
   });
 
-  test('author: <a>, <b> requires every author sub-term to match', async () => {
-    // "smith" and "lee" are last names from two different papers, so an OR
-    // would return both; only the co-authored paper has them together,
-    // proving authorSubTerms uses AND (.every), not OR (.some).
-    const { results } = await fetchResults('author: smith, lee');
-    assert.deepEqual(titlesOf(results), ['Deep CNN Segmentation of MRI Scans']);
+  test('a full name must belong to one author, but middle names may be skipped', async () => {
+    // P9 has "Abhishek Kumar" and "Priya Sambyal" - two different people
+    assert.deepEqual(await search('author: abhishek sambyal'), [P7]);
+    // every word of a full name is required, all on the same author
+    assert.deepEqual(await search('author: abhishek singh sambyal'), [P7]);
+    assert.deepEqual(await search('author: abhishek kumar sambyal'), []);
+    assert.deepEqual(await search('author: jane lee'), []);
+    // a partial name still matches every author containing it
+    assert.deepEqual(await search('author: sambyal'), [P7, P9].sort());
   });
 
-  test('multiple author names combine with a keyword clause', async () => {
-    const { results } = await fetchResults('author: smith, lee; segmentation');
-    assert.deepEqual(titlesOf(results), ['Deep CNN Segmentation of MRI Scans']);
-    // the same authors with a keyword they do not match returns nothing
-    const { results: none } = await fetchResults('author: smith, lee; molecule');
-    assert.deepEqual(none, []);
+  test('BibTeX-style "Last, First and Last, First" author lists are split per person', async () => {
+    assert.deepEqual(await search('author: aleksei tuilpin and alice doe'), [P8]);
+    // "tuilpin" and "doe" are two different people, so as one name they match nothing
+    assert.deepEqual(await search('author: tuilpin doe'), []);
+  });
+
+  test('authors and topics combine with plain "and", in either order', async () => {
+    assert.deepEqual(await search('author: smith and segmentation'), [P1]);
+    assert.deepEqual(await search('segmentation and author: smith'), [P1]);
+    assert.deepEqual(await search('author: smith and lee and molecule'), []);
+    // two authors and a topic, all required
+    assert.deepEqual(await search('author: abhishek sambyal and aleksei tuilpin and calibration'), [P7]);
+    assert.deepEqual(await search('author: aleksei tuilpin and classification'), [P7, P8].sort());
+  });
+
+  test('"or" can mix authors and topics', async () => {
+    assert.deepEqual(await search('author: sambyal or graph'), [P6, P7, P9].sort());
+    // author: stays on across "or", so the second "aleksei tuilpin" is a name too
+    assert.deepEqual(await search('author: aleksei tuilpin and calibration or aleksei tuilpin and distillation'),
+      [P7, P8].sort());
   });
 
   test('a plain keyword query does not match on author names', async () => {
     // "smith" only appears in fixture authors for papers 1 and 2; a keyword-only
-    // search must not surface them since the keyword blob is title+abstract only.
-    const { results } = await fetchResults('smith');
-    assert.equal(results.length, 1);
-    assert.equal(results[0].title, "Extending Smith's Loss Function for Robust Training");
-  });
-});
-
-describe('fetchResults: AND vs OR keyword search', () => {
-  test('default (AND) requires every term to match', async () => {
-    const { results } = await fetchResults('cnn transformer');
-    assert.deepEqual(titlesOf(results), [
-      'Deep CNN Segmentation of MRI Scans',
-      'Transformer Networks for Visual Recognition',
-    ].sort());
-  });
-
-  test('"or" returns the union of papers matching either term', async () => {
-    const { results } = await fetchResults('cnn or transformer');
-    assert.deepEqual(titlesOf(results), [
-      'Deep CNN Segmentation of MRI Scans',
-      'Transformer Networks for Visual Recognition',
-      'Federated Learning Survey with CNN Backbones',
-    ].sort());
+    // search must not surface them since keywords match title+abstract only.
+    assert.deepEqual(await search('smith'), ["Extending Smith's Loss Function for Robust Training"]);
   });
 });
 
@@ -143,14 +183,14 @@ describe('fetchResults: keyword matches title and abstract fields', () => {
   test('a term appearing only in the title still matches', async () => {
     const { results } = await fetchResults('graph');
     assert.equal(results.length, 1);
-    assert.equal(results[0].title, 'Graph Neural Networks for Chemistry');
+    assert.equal(results[0].title, P6);
     assert.equal(results[0].score, 10); // WEIGHTS.TITLE only
   });
 
   test('a term appearing only in the abstract still matches', async () => {
     const { results } = await fetchResults('molecule');
     assert.equal(results.length, 1);
-    assert.equal(results[0].title, 'Graph Neural Networks for Chemistry');
+    assert.equal(results[0].title, P6);
     assert.equal(results[0].score, 5); // WEIGHTS.ABSTRACT only
   });
 });

@@ -1,5 +1,6 @@
 let papersCache = null;
 let loadingPromise = null;
+let nameWords = null; // every word that appears in some author's name, for telling names from topics
 
 /**
  * Search field weights for relevance scoring.
@@ -36,13 +37,20 @@ async function loadPapers() {
       const data = perConference.flat();
 
       // Pre-process for performance
+      const words = new Set();
       for (const p of data) {
         const t = (p.title || '').toLowerCase();
         const a = (p.authors || '').toLowerCase();
         const abs = (p.abstract || '').toLowerCase();
-        p._search_blob = `${t} ${abs}`;
-        p._searchable = { title: t, authors: a, abstract: abs, venue: (p.venue || '').toLowerCase() };
+        p._searchable = {
+          title: t, abstract: abs, venue: (p.venue || '').toLowerCase(),
+          // One entry per author, so a name never spans two people. Most sources list
+          // "First Last, First Last"; some ECCV/MICCAI use BibTeX-style "Last, First and Last, First".
+          authorList: /\sand\s/.test(a) ? a.split(/\s+and\s+/) : a.split(/\s*,\s*/)
+        };
+        for (const w of nameTokens(a)) words.add(w);
       }
+      nameWords = words;
       papersCache = data;
       return papersCache;
     } catch (err) {
@@ -54,47 +62,57 @@ async function loadPapers() {
   return loadingPromise;
 }
 
+/** Split a lowercased name (or name-like input) into its letter/digit words. */
+const nameTokens = s => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
 /**
- * Extract search terms and determine logic (AND vs OR).
- * ';' separates the author clause from the keyword clause, in either order;
- * inside author: a comma separates names (all are required).
+ * Extract the boolean structure of a query: OR-groups of AND-ed units, where
+ * each unit is a topic `{ phrase }` or an author `{ author: [words] }`.
+ * 'and' binds tighter than 'or'; words joined by spaces stay one unit.
+ * After 'author:', a unit is read as a name when all its words occur in some
+ * author's name (`names`, built from the archive), otherwise as a topic - so
+ * "author: doe and smith and calibration" is two names and one topic.
+ * Commas and semicolons carry no meaning.
  */
-export function extractSearchTerms(query) {
-  const q = query.toLowerCase().trim();
-  if (!q) return { terms: [], isOrSearch: false, authorTerm: null, authorSubTerms: [] };
+export function extractSearchTerms(query, names = nameWords) {
+  const q = ` ${query.toLowerCase().replace(/[,;]/g, ' ')} `;
+  const isName = words => !names || words.every(w => nameTokens(w).every(t => names.has(t)));
 
-  const authorParts = [], keywordParts = [];
-  for (const segment of q.split(';')) {
-    const s = segment.trim();
-    if (!s) continue;
-    if (s.startsWith('author:')) authorParts.push(s.slice(7).trim());
-    else keywordParts.push(s);
-  }
+  let authorMode = false;
+  const toUnits = text => {
+    const at = text.indexOf('author:');
+    if (at >= 0) {
+      const head = toUnits(text.slice(0, at));
+      authorMode = true;
+      return [...head, ...toUnits(text.slice(at + 7))];
+    }
+    const t = text.trim().replace(/\s+/g, ' ');
+    if (t.length < 2) return [];
+    const words = t.split(' ');
+    return [authorMode && isName(words) ? { author: words } : { phrase: t }];
+  };
 
-  const authorTerm = authorParts.filter(Boolean).join(', ') || null;
-  const processed = keywordParts.join(' ');
+  const groups = q.split(/\s+or\s+/)
+    .map(g => ` ${g} `.split(/\s+and\s+/).flatMap(toUnits))
+    .filter(g => g.length);
 
-  // Names split on commas and spaces alike, so "doe, smith" and "jane smith"
-  // both become AND-ed sub-terms; a stray "and" between names is ignored.
-  const authorSubTerms = authorTerm
-    ? authorTerm.split(/[\s,]+/).filter(t => t && t !== 'and')
-    : [];
-  const isOrSearch = /\s+or\s+/.test(processed) || processed.includes(',');
-  const terms = isOrSearch 
-    ? processed.split(/,|\s+or\s+/).map(t => t.trim()).filter(Boolean)
-    : processed.replace(/\s+and\s+/g, ' ').split(/\s+/).map(t => t.trim()).filter(t => t.length > 1);
+  // Flat lists for highlighting matches in the rendered cards.
+  const units = groups.flat();
+  const terms = [...new Set(units.filter(u => u.phrase).map(u => u.phrase))];
+  const authorSubTerms = [...new Set(units.filter(u => u.author).flatMap(u => u.author))];
 
-  return { terms, isOrSearch, authorTerm, authorSubTerms };
+  return { groups, terms, authorSubTerms };
 }
 
 /**
  * Fetch search results (client-side).
- * @returns {Promise<{results: Array, activeVenues: Set, activeYears: Set}>}
+ * @returns {Promise<{results: Array, activeVenues: Set, activeYears: Set, parsed: Object}>}
  */
 export async function fetchResults(query, venue = '', year = '') {
   const papers = await loadPapers();
-  const { terms, isOrSearch, authorSubTerms } = extractSearchTerms(query);
-  
+  const parsed = extractSearchTerms(query);
+  const { groups, terms } = parsed;
+
   const venueSet = venue && (Array.isArray(venue) ? venue.length > 0 : true) 
     ? (Array.isArray(venue) ? venue : [venue]).map(v => v.toLowerCase()) 
     : null;
@@ -105,13 +123,15 @@ export async function fetchResults(query, venue = '', year = '') {
   const results = [];
   const activeVenues = new Set();
   const activeYears = new Set();
-  const hasKeywords = terms.length > 0;
-  const hasAuthorTerms = authorSubTerms.length > 0;
+  const hasQuery = groups.length > 0;
+  const authorUnits = groups.flat().filter(u => u.author);
 
-  // Precompile regular expressions for word boundary matching
+  // Precompile one word-boundary regex per phrase; its words may be separated by any whitespace.
   const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const termRegexes = terms.map(term => new RegExp(`\\b${escapeRegExp(term)}\\b`));
-  
+  const termRegexes = terms.map(term => new RegExp(`\\b${term.split(' ').map(escapeRegExp).join('\\s+')}\\b`));
+  // A name matches when a single author on the paper contains all of its words.
+  const hasName = (list, name) => list.some(a => name.every(w => a.includes(w)));
+
   for (let i = 0, len = papers.length; i < len; i++) {
     const p = papers[i];
     const searchable = p._searchable;
@@ -123,28 +143,23 @@ export async function fetchResults(query, venue = '', year = '') {
     // 2. Search matching and Scoring
     let score = 0;
     
-    // A. Author Match (Strict Filter - All terms must match)
-    if (hasAuthorTerms) {
-      if (!authorSubTerms.every(t => searchable.authors.includes(t))) continue;
-      score += WEIGHTS.AUTHOR_MATCH;
-    }
-
-    // B. Keyword Match
-    if (hasKeywords) {
-      let matchCount = 0;
-      const blob = p._search_blob;
-      
+    // Some OR-group must have every unit satisfied: each name on the paper,
+    // each phrase in its title/abstract.
+    if (hasQuery) {
+      const matched = new Set();
       for (let j = 0; j < termRegexes.length; j++) {
         const regex = termRegexes[j];
-        if (regex.test(blob)) {
-          matchCount++;
-          if (regex.test(searchable.title))    score += WEIGHTS.TITLE;
-          if (regex.test(searchable.abstract)) score += WEIGHTS.ABSTRACT;
-        }
+        const inTitle = regex.test(searchable.title), inAbstract = regex.test(searchable.abstract);
+        if (!inTitle && !inAbstract) continue;
+        matched.add(terms[j]);
+        if (inTitle)    score += WEIGHTS.TITLE;
+        if (inAbstract) score += WEIGHTS.ABSTRACT;
       }
-      if (isOrSearch ? matchCount === 0 : matchCount < terms.length) continue;
-    } 
-    else if (!hasAuthorTerms && !venueSet && !yearSet) continue;
+      const list = searchable.authorList;
+      if (!groups.some(g => g.every(u => u.author ? hasName(list, u.author) : matched.has(u.phrase)))) continue;
+      if (authorUnits.some(u => hasName(list, u.author))) score += WEIGHTS.AUTHOR_MATCH;
+    }
+    else if (!venueSet && !yearSet) continue;
 
     results.push({ ...p, score });
     
@@ -158,7 +173,7 @@ export async function fetchResults(query, venue = '', year = '') {
   // Optimized sort: Year (desc), then Score (desc)
   results.sort((a, b) => (b.year - a.year) || (b.score - a.score));
   
-  return { results, activeVenues, activeYears };
+  return { results, activeVenues, activeYears, parsed };
 }
 const STORAGE_KEY = 'medsearch_recent';
 const MAX_RECENT  = 4;

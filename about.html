@@ -217,38 +217,58 @@
       </section>
 
       <!-- Search syntax -->
-      <section>
+      <section id="how-to-search">
         <h2 class="rule-heading">How to search</h2>
         <dl class="prose-body flex flex-col gap-3">
           <div>
-            <dt class="font-bold">Keywords — all must match</dt>
+            <dt class="font-bold">A phrase — just type it</dt>
             <dd class="text-ink/70 dark:text-paper/70">
-              <span class="code-chip">diffusion models</span> finds papers whose title or abstract contains both
-              words, in any order. <span class="code-chip">and</span> between words is optional and means the same
-              thing.
+              <span class="code-chip">knowledge distillation</span> finds papers whose title or abstract contains
+              those words side by side, in that order.
             </dd>
           </div>
           <div>
-            <dt class="font-bold">Either term — <span class="code-chip">or</span> or a comma</dt>
+            <dt class="font-bold">Both terms — <span class="code-chip">and</span></dt>
             <dd class="text-ink/70 dark:text-paper/70">
-              <span class="code-chip">transformer or vision</span> and
-              <span class="code-chip">transformer, vision</span> both match papers containing either term.
+              <span class="code-chip">classification and calibration</span> finds papers that mention both, anywhere
+              in the title or abstract.
+            </dd>
+          </div>
+          <div>
+            <dt class="font-bold">Either term — <span class="code-chip">or</span></dt>
+            <dd class="text-ink/70 dark:text-paper/70">
+              <span class="code-chip">classification or calibration</span> finds papers that mention either one.
+              When you mix them, <span class="code-chip">and</span> groups first:
+              <span class="code-chip">mri or ct and segmentation</span> means <em>mri</em>, or <em>ct</em> together
+              with <em>segmentation</em>.
             </dd>
           </div>
           <div>
             <dt class="font-bold">By author — <span class="code-chip">author:</span></dt>
             <dd class="text-ink/70 dark:text-paper/70">
-              <span class="code-chip">author: sambyal</span> lists that person's papers. Separate names with a comma —
-              <span class="code-chip">author: doe, smith</span> requires both on the paper, so it finds co-authored
-              work.
+              <span class="code-chip">author: abhishek sambyal</span> lists that person's papers. A space keeps the
+              parts of one name together, and a partial name such as <span class="code-chip">author: sambyal</span>
+              works too.
             </dd>
           </div>
           <div>
-            <dt class="font-bold">Author and topic together — <span class="code-chip">;</span></dt>
+            <dt class="font-bold">Several authors — <span class="code-chip">or</span> / <span class="code-chip">and</span></dt>
             <dd class="text-ink/70 dark:text-paper/70">
-              A semicolon ends the author clause; whatever follows is matched against titles and abstracts.
-              <span class="code-chip">author: hinton; deep learning</span> and
-              <span class="code-chip">calibration; author: sambyal, bathula</span> — either order works.
+              <span class="code-chip">author: aleksei tiulpin or abhishek sambyal</span> lists papers by either
+              person; <span class="code-chip">author: aleksei tiulpin and abhishek sambyal</span> lists only the
+              papers they wrote together.
+            </dd>
+          </div>
+          <div>
+            <dt class="font-bold">Authors and topics together</dt>
+            <dd class="text-ink/70 dark:text-paper/70">
+              Keep going with <span class="code-chip">and</span> / <span class="code-chip">or</span>:
+              <span class="code-chip">author: abhishek and bathula and calibration</span> finds calibration papers
+              the two wrote together. After <span class="code-chip">author:</span>, any word that is someone's name
+              is read as a name and everything else as a topic; the results line shows which is which. A few
+              topic words are also surnames (<em>gan</em>, <em>brain</em>) — put those before
+              <span class="code-chip">author:</span> to keep them topics:
+              <span class="code-chip">gan and author: hinton</span>.
             </dd>
           </div>
           <div>
