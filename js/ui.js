@@ -109,6 +109,116 @@ export function stopPurposeLoop() {
   }
 }
 
+/**
+ * Rotating drum of example searches under the search bar. Rows sit on a
+ * barrel (see .drum-row in tailwind.src.css); the active one is clickable,
+ * its neighbours show tilted above and below.
+ */
+
+const EXAMPLES = [
+  "classification or calibration",
+  "author: abhishek sambyal or deepti bathula",
+  "author: hinton and deep learning",
+  "mri or ct and segmentation",
+  "knowledge distillation",
+  "classification and calibration",
+  "author: sambyal and calibration",
+  "few-shot learning",
+  "isic or oai"
+];
+const DRUM_DWELL = 2600;
+const WHEEL_THROTTLE = 300;
+
+/** Signed position of row i relative to the active row k, wrapped into [-n/2, n/2). */
+export const wrapOffset = (i, k, n) => {
+  const half = Math.floor(n / 2);
+  return ((((i - k) % n) + n + half) % n) - half;
+};
+
+let drumAbort = null, drumTimer = null, drumPick = null, drumEl = null;
+
+/**
+ * Start (or restart) the example drum.
+ * @param {HTMLElement} [el] - #example-drum; defaults to the last one used.
+ * @param {(term: string) => void} [onPick] - Called when the active example is chosen.
+ */
+export function startExampleDrum(el = drumEl, onPick = drumPick) {
+  if (!el || !onPick) return;
+  stopExampleDrum();
+  drumEl = el; drumPick = onPick;
+
+  const stage = el.querySelector('.drum-stage');
+  stage.replaceChildren(...EXAMPLES.map(text => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'drum-row no-tap';
+    row.textContent = text;
+    return row;
+  }));
+  const rows = [...stage.children], n = rows.length, prev = [];
+  let k = 0, hovering = false, lastWheel = 0;
+
+  const render = () => {
+    const hadFocus = el.contains(document.activeElement);
+    rows.forEach((row, i) => {
+      const off = wrapOffset(i, k, n);
+      // Rows crossing the wrap seam jump instantly; they're invisible there.
+      row.classList.toggle('drum-jump', prev[i] === undefined || Math.abs(off - prev[i]) > 1);
+      row.style.setProperty('--off', off);
+      row.classList.toggle('is-active', off === 0);
+      row.classList.toggle('is-far', Math.abs(off) > 1);
+      row.tabIndex = off === 0 ? 0 : -1;
+      off === 0 ? row.removeAttribute('aria-hidden') : row.setAttribute('aria-hidden', 'true');
+      prev[i] = off;
+    });
+    if (hadFocus) rows[((k % n) + n) % n].focus({ preventScroll: true });
+  };
+  const step = d => { k += d; render(); };
+
+  drumAbort = new AbortController();
+  const { signal } = drumAbort;
+
+  el.addEventListener('click', e => {
+    const row = e.target.closest('.drum-row');
+    if (!row) return;
+    const off = wrapOffset(rows.indexOf(row), k, n);
+    off === 0 ? drumPick(row.textContent) : step(off);
+  }, { signal });
+
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    step(e.key === 'ArrowDown' ? 1 : -1);
+  }, { signal });
+
+  el.addEventListener('wheel', e => {
+    if (!e.deltaY) return;
+    e.preventDefault();
+    const now = performance.now();
+    if (now - lastWheel < WHEEL_THROTTLE) return;
+    lastWheel = now;
+    step(Math.sign(e.deltaY));
+  }, { signal, passive: false });
+
+  el.addEventListener('pointerenter', () => { hovering = true; }, { signal });
+  el.addEventListener('pointerleave', () => { hovering = false; }, { signal });
+
+  render();
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    drumTimer = setInterval(() => {
+      if (!hovering && !document.hidden && !el.contains(document.activeElement)) step(1);
+    }, DRUM_DWELL);
+  }
+}
+
+export function stopExampleDrum() {
+  clearInterval(drumTimer);
+  drumTimer = null;
+  drumAbort?.abort();
+  drumAbort = null;
+}
+
 let conferenceOrder = [];
 
 export async function initializeFilters(confContainer, yearContainer, onSearch) {
@@ -324,13 +434,15 @@ export function renderPills(el) {
 }
 
 export function transitionToResults(refs) {
-  const { headerSection, logoTitle, subtitle, examplePills, purposeSection, resultsSection } = refs;
+  const { headerSection, logoTitle, subtitle, examplePills, purposeSection, resultsSection, searchHints } = refs;
   headerSection.classList.replace('header-landing', 'header-compact');
   logoTitle.classList.replace('title-landing', 'title-compact');
   subtitle.classList.replace('subtitle-landing', 'subtitle-compact');
   fadeOutAndHide(examplePills, 200);
   fadeOutAndHide(purposeSection, 200);
+  fadeOutAndHide(searchHints, 200);
   stopPurposeLoop();
+  stopExampleDrum();
   // Returns a Promise: callers in app.js chain performSearch() off it so
   // results only start rendering once the reveal has begun.
   return new Promise(resolve => setTimeout(() => { showAndFadeIn(resultsSection); resolve(); }, 200));
@@ -344,7 +456,7 @@ export function resetToHome(refs, onReset) {
     logoTitle.classList.replace('title-compact', 'title-landing');
     subtitle.classList.replace('subtitle-compact', 'subtitle-landing');
     showAndFadeIn(examplePills); showAndFadeIn(purposeSection); if (searchHints) showAndFadeIn(searchHints);
-    renderPills(examplePills); startPurposeLoop(purposeSection.querySelector('p'));
+    renderPills(examplePills); startPurposeLoop(purposeSection.querySelector('p')); startExampleDrum();
   }, 200);
   input.value = '';
   document.querySelectorAll('input[type="checkbox"]:not([name$="-all"])').forEach(cb => cb.checked = false);

@@ -1,5 +1,5 @@
 import { saveRecent, fetchResults } from './core.js';
-import { renderResults, renderPills, transitionToResults, resetToHome, initializeFilters, updateFilterHighlights, startPurposeLoop } from './ui.js';
+import { renderResults, renderPills, transitionToResults, resetToHome, initializeFilters, updateFilterHighlights, startPurposeLoop, startExampleDrum } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -68,10 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initiateSearch();
   });
 
-  domRefs.examplePills.addEventListener('click', e => {
-    const pill = e.target.closest('.pill-example');
-    if (!pill) return;
-    const term = pill.textContent.trim();
+  function runExample(term) {
     domRefs.input.value = term;
     saveRecent(term);
     if (!hasSearched) {
@@ -79,6 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
       hasSearched = true;
     }
     initiateSearch();
+  }
+
+  startExampleDrum(document.getElementById('example-drum'), runExample);
+
+  domRefs.examplePills.addEventListener('click', e => {
+    const pill = e.target.closest('.pill-example');
+    if (!pill) return;
+    runExample(pill.textContent.trim());
   });
 
   domRefs.examplePills.addEventListener('keydown', e => {

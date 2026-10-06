@@ -195,15 +195,16 @@
         </form>
 
         <div id="search-hints"
-          class="mt-2 ml-1 pl-4 flex flex-wrap items-center text-[0.68rem] text-ink/40 dark:text-paper/40 font-serif italic opacity-100 transition-opacity duration-200 ease-in-out border-l border-ink/10 dark:border-paper/10">
-          <span class="mr-2 opacity-70">try:</span>
-          <span class="text-ink/70 dark:text-paper/70">classification or calibration</span>
-          <span class="mx-3 not-italic opacity-70" aria-hidden="true">·</span>
-          <span class="text-ink/70 dark:text-paper/70">author: aleksei tiulpin or abhishek sambyal</span>
-          <span class="mx-3 not-italic opacity-70" aria-hidden="true">·</span>
-          <span class="text-ink/70 dark:text-paper/70">author: hinton and deep learning</span>
-          <span class="mx-3 not-italic opacity-70" aria-hidden="true">·</span>
-          <a href="about.html#how-to-search" class="not-italic text-ink/70 dark:text-paper/70 hover:underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">how to search →</a>
+          class="mt-2 ml-1 pl-4 flex flex-wrap items-center gap-x-2 text-[0.68rem] text-ink/40 dark:text-paper/40 font-serif italic opacity-100 transition-opacity duration-200 ease-in-out border-l border-ink/10 dark:border-paper/10">
+          <span class="shrink-0 opacity-70">try:</span>
+          <!-- Rotating example drum - rows are filled by startExampleDrum() in js/ui.js -->
+          <div id="example-drum" class="drum-window flex-1 min-w-0" role="group" aria-roledescription="carousel"
+            aria-label="Example searches – arrow keys to browse">
+            <div class="drum-edge">
+              <div class="drum-stage"></div>
+            </div>
+          </div>
+          <a href="about.html#how-to-search" class="basis-full sm:basis-auto shrink-0 not-italic text-ink/70 dark:text-paper/70 hover:underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">how to search →</a>
         </div>
 
         <div id="filter-container"
