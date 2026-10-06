@@ -129,6 +129,9 @@ const EXAMPLES = [
 const DRUM_DWELL = 2600;
 const WHEEL_THROTTLE = 300;
 
+/** Split an example into plain text and query keywords; keywords sit at odd indices. */
+export const splitSyntax = text => text.split(/(author:|\band\b|\bor\b)/);
+
 /** Signed position of row i relative to the active row k, wrapped into [-n/2, n/2). */
 export const wrapOffset = (i, k, n) => {
   const half = Math.floor(n / 2);
@@ -152,7 +155,13 @@ export function startExampleDrum(el = drumEl, onPick = drumPick) {
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'drum-row no-tap';
-    row.textContent = text;
+    row.append(...splitSyntax(text).map((part, i) => {
+      if (i % 2 === 0) return part;
+      const kw = document.createElement('strong');
+      kw.className = 'drum-kw';
+      kw.textContent = part;
+      return kw;
+    }));
     return row;
   }));
   const rows = [...stage.children], n = rows.length, prev = [];
@@ -228,7 +237,7 @@ export async function initializeFilters(confContainer, yearContainer, onSearch) 
     const tpl = (name, val, label, checked = false) => `
       <label class="flex items-center gap-2 cursor-pointer group no-tap">
         <input type="checkbox" name="${name}" value="${val}" class="sr-only peer" ${checked ? 'checked' : ''}>
-        <span class="text-[0.7rem] uppercase tracking-widest text-ink/40 dark:text-paper/40 peer-checked:text-ink dark:peer-checked:text-paper peer-checked:font-black group-hover:text-ink/70 dark:group-hover:text-paper/70 transition-[color,border-color] duration-150 ease-out border-b border-transparent peer-checked:border-ink/20 dark:peer-checked:border-paper/20 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink dark:peer-focus-visible:outline-paper peer-focus-visible:rounded-sm">${label}</span>
+        <span class="filter-chip">${label}</span>
       </label>`;
 
     confContainer.innerHTML = tpl('conference-all', 'all', 'All', true) + config.conferences.map(c => tpl('conference', c.id, c.name)).join('');
@@ -250,15 +259,15 @@ export async function initializeFilters(confContainer, yearContainer, onSearch) 
 }
 
 export function updateFilterHighlights(activeVenues = new Set(), activeYears = new Set(), yearCounts = null, venueCounts = null) {
-  const cls = ['bg-[#a5d6a7]', 'dark:bg-[#1b5e20]', 'px-1.5', 'py-0.5', '-mx-1.5', 'rounded', 'font-black', '!text-black', 'dark:!text-white'];
-  document.querySelectorAll('#filter-container span').forEach(s => {
-    s.classList.remove(...cls);
-    s.style.fontSize = s.style.opacity = '';
+  document.querySelectorAll('#filter-container .filter-chip').forEach(s => {
+    s.classList.remove('is-hit');
+    s.style.fontSize = '';
+    s.style.removeProperty('--hit');
   });
 
   const apply = (name, set) => set.forEach(v => {
     const el = document.querySelector(`input[name="${name}"][value="${v}"]`);
-    if (el) el.nextElementSibling.classList.add(...cls);
+    if (el) el.nextElementSibling.classList.add('is-hit');
   });
 
   apply('conference', activeVenues);
@@ -271,8 +280,9 @@ export function updateFilterHighlights(activeVenues = new Set(), activeYears = n
       const el = document.querySelector(`input[name="${name}"][value="${v}"]`);
       if (el) {
         const s = el.nextElementSibling, c = counts[v] || 0, r = max === min ? 0.5 : (c - min) / (max - min);
-        s.style.fontSize = `${0.65 + r * 0.3}rem`;
-        s.style.opacity = `${0.8 + r * 0.2}`;
+        // Busier venues/years read slightly larger and more strongly tinted.
+        s.style.fontSize = `${0.64 + r * 0.2}rem`;
+        s.style.setProperty('--hit', r.toFixed(2));
       }
     });
   };

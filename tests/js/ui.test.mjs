@@ -1,6 +1,24 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { wrapOffset } from '../../js/ui.js';
+import { wrapOffset, splitSyntax } from '../../js/ui.js';
+
+describe('splitSyntax', () => {
+  const keywords = (t) => splitSyntax(t).filter((_, i) => i % 2);
+
+  test('picks out author:, and, or as whole words', () => {
+    assert.deepEqual(keywords('author: hinton and deep learning'), ['author:', 'and']);
+    assert.deepEqual(keywords('mri or ct and segmentation'), ['or', 'and']);
+  });
+
+  test('ignores keywords inside other words', () => {
+    assert.deepEqual(keywords('classification calibration android'), []);
+  });
+
+  test('parts join back to the original text', () => {
+    const t = 'author: abhishek sambyal or deepti bathula';
+    assert.equal(splitSyntax(t).join(''), t);
+  });
+});
 
 const offsets = (k, n) => Array.from({ length: n }, (_, i) => wrapOffset(i, k, n));
 

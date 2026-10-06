@@ -99,13 +99,13 @@
     }
 
     .subtitle-landing {
-      font-size: 0.875rem;
+      font-size: clamp(0.95rem, 1.4vw, 1.1rem);
       margin-top: 0.25rem;
       margin-bottom: 1rem;
     }
 
     .subtitle-compact {
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       margin-top: 0.125rem;
       margin-bottom: 0.75rem;
     }
@@ -168,8 +168,8 @@
           class="font-masthead font-black tracking-tight text-ink dark:text-paper transition-[font-size,transform] duration-300 ease-in-out title-landing will-change-[font-size] cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink/70 dark:focus-visible:outline-paper/70 focus-visible:rounded-sm">
           PaperSift
         </h1>
-        <p class="italic text-ink/60 dark:text-paper/60 font-serif opacity-100 transition-[font-size,margin,opacity] duration-300 ease-in-out subtitle-landing"
-          id="subtitle">Find Research Papers That Actually Matter</p>
+        <p class="italic text-ink/75 dark:text-paper/75 font-serif opacity-100 transition-[font-size,margin,opacity] duration-300 ease-in-out subtitle-landing"
+          id="subtitle">Find Research Papers That <strong class="font-bold text-ink dark:text-paper">Actually Matter</strong></p>
       </div>
 
       <div class="w-full max-w-xl transition-transform duration-[250ms] ease-in-out will-change-transform"
@@ -195,7 +195,7 @@
         </form>
 
         <div id="search-hints"
-          class="mt-2 ml-1 pl-4 flex flex-wrap items-center gap-x-2 text-[0.68rem] text-ink/40 dark:text-paper/40 font-serif italic opacity-100 transition-opacity duration-200 ease-in-out border-l border-ink/10 dark:border-paper/10">
+          class="mt-2 ml-1 pl-4 flex flex-wrap items-center gap-x-2 text-[0.8rem] sm:text-[0.9rem] text-ink/55 dark:text-paper/55 font-serif italic opacity-100 transition-opacity duration-200 ease-in-out border-l border-ink/10 dark:border-paper/10">
           <span class="shrink-0 opacity-70">try:</span>
           <!-- Rotating example drum - rows are filled by startExampleDrum() in js/ui.js -->
           <div id="example-drum" class="drum-window flex-1 min-w-0" role="group" aria-roledescription="carousel"
@@ -209,17 +209,17 @@
 
         <div id="filter-container"
           class="flex flex-col gap-2 sm:gap-3 mt-3 sm:mt-4 transition-[opacity,transform] duration-[250ms] ease-in-out">
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div class="flex items-start gap-x-3">
             <label
-              class="shrink-0 text-[0.625rem] sm:text-[0.7rem] uppercase tracking-[0.2em] text-ink/60 dark:text-paper/60 font-bold">Venue</label>
-            <div id="conference-filters" class="flex flex-wrap gap-x-4 gap-y-2 min-w-0 flex-1">
+              class="shrink-0 w-12 sm:w-14 pt-[0.6rem] text-[0.625rem] sm:text-[0.7rem] uppercase tracking-[0.2em] text-ink/60 dark:text-paper/60 font-bold">Venue</label>
+            <div id="conference-filters" class="filter-tray min-w-0 flex-1">
               <!-- Dynamically populated -->
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div class="flex items-start gap-x-3">
             <label
-              class="shrink-0 text-[0.625rem] sm:text-[0.7rem] uppercase tracking-[0.2em] text-ink/60 dark:text-paper/60 font-bold">Years</label>
-            <div id="year-filters" class="flex flex-wrap gap-x-2 sm:gap-x-4 gap-y-1 sm:gap-y-2 no-tap py-1 min-w-0 flex-1">
+              class="shrink-0 w-12 sm:w-14 pt-[0.6rem] text-[0.625rem] sm:text-[0.7rem] uppercase tracking-[0.2em] text-ink/60 dark:text-paper/60 font-bold">Years</label>
+            <div id="year-filters" class="filter-tray no-tap min-w-0 flex-1">
               <!-- Dynamically populated -->
             </div>
           </div>
