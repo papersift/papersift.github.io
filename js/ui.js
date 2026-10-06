@@ -1,5 +1,3 @@
-import { DEFAULTS, getRecent } from './core.js';
-
 export function fadeOutAndHide(el, dur = 200) {
   if (!el) return;
   el.classList.add('opacity-0', 'pointer-events-none');
@@ -438,17 +436,11 @@ export function renderResults(res, refs, parsed) {
   renderNext(list);
 }
 
-export function renderPills(el) {
-  const t = getRecent().length ? getRecent() : DEFAULTS;
-  el.innerHTML = t.map(v => `<span class="pill-example bg-ink/[0.03] dark:bg-paper/[0.03] border border-ink/10 dark:border-paper/10 px-3 py-2 rounded-full cursor-pointer hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:focus-visible:outline-paper transition-[background-color,color] duration-150 ease-out touch-manipulation no-tap" role="button" tabindex="0">${v}</span>`).join('');
-}
-
 export function transitionToResults(refs) {
-  const { headerSection, logoTitle, subtitle, examplePills, purposeSection, resultsSection, searchHints } = refs;
+  const { headerSection, logoTitle, subtitle, purposeSection, resultsSection, searchHints } = refs;
   headerSection.classList.replace('header-landing', 'header-compact');
   logoTitle.classList.replace('title-landing', 'title-compact');
   subtitle.classList.replace('subtitle-landing', 'subtitle-compact');
-  fadeOutAndHide(examplePills, 200);
   fadeOutAndHide(purposeSection, 200);
   fadeOutAndHide(searchHints, 200);
   stopPurposeLoop();
@@ -459,14 +451,14 @@ export function transitionToResults(refs) {
 }
 
 export function resetToHome(refs, onReset) {
-  const { headerSection, logoTitle, subtitle, examplePills, purposeSection, resultsSection, input, resultsList, resultsCount, searchHints } = refs;
+  const { headerSection, logoTitle, subtitle, purposeSection, resultsSection, input, resultsList, resultsCount, searchHints } = refs;
   fadeOutAndHide(resultsSection, 200);
   setTimeout(() => {
     headerSection.classList.replace('header-compact', 'header-landing');
     logoTitle.classList.replace('title-compact', 'title-landing');
     subtitle.classList.replace('subtitle-compact', 'subtitle-landing');
-    showAndFadeIn(examplePills); showAndFadeIn(purposeSection); if (searchHints) showAndFadeIn(searchHints);
-    renderPills(examplePills); startPurposeLoop(purposeSection.querySelector('p')); startExampleDrum();
+    showAndFadeIn(purposeSection); if (searchHints) showAndFadeIn(searchHints);
+    startPurposeLoop(purposeSection.querySelector('p')); startExampleDrum();
   }, 200);
   input.value = '';
   document.querySelectorAll('input[type="checkbox"]:not([name$="-all"])').forEach(cb => cb.checked = false);

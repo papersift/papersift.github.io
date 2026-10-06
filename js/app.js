@@ -1,5 +1,5 @@
-import { saveRecent, fetchResults } from './core.js';
-import { renderResults, renderPills, transitionToResults, resetToHome, initializeFilters, updateFilterHighlights, startPurposeLoop, startExampleDrum } from './ui.js';
+import { fetchResults } from './core.js';
+import { renderResults, transitionToResults, resetToHome, initializeFilters, updateFilterHighlights, startPurposeLoop, startExampleDrum } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     headerSection:     document.getElementById('header-section'),
     logoTitle:         document.querySelector('#logo-container h1'),
     subtitle:          document.getElementById('subtitle'),
-    examplePills:      document.getElementById('example-pills'),
     purposeSection:    document.getElementById('purpose-section'),
     purposeText:       document.getElementById('purpose-text'),
     resultsSection:    document.getElementById('results-section'),
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let hasSearched = false, debounceTimer = null, transitionPromise = Promise.resolve();
 
-  renderPills(domRefs.examplePills);
   initializeFilters(domRefs.conferenceFilters, domRefs.yearFilters, initiateSearch);
   startPurposeLoop(domRefs.purposeText);
 
@@ -63,14 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   domRefs.form.addEventListener('submit', e => {
     e.preventDefault();
-    const q = domRefs.input.value.trim();
-    if (q) saveRecent(q);
     initiateSearch();
   });
 
   function runExample(term) {
     domRefs.input.value = term;
-    saveRecent(term);
     if (!hasSearched) {
       transitionPromise = transitionToResults(domRefs);
       hasSearched = true;
@@ -79,20 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   startExampleDrum(document.getElementById('example-drum'), runExample);
-
-  domRefs.examplePills.addEventListener('click', e => {
-    const pill = e.target.closest('.pill-example');
-    if (!pill) return;
-    runExample(pill.textContent.trim());
-  });
-
-  domRefs.examplePills.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const pill = e.target.closest('.pill-example');
-    if (!pill) return;
-    e.preventDefault();
-    pill.click();
-  });
 
   function initiateSearch() {
     const query = domRefs.input.value.trim();
