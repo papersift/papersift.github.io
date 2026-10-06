@@ -101,7 +101,7 @@
     .subtitle-landing {
       font-size: clamp(0.95rem, 1.4vw, 1.1rem);
       margin-top: 0.25rem;
-      margin-bottom: 1rem;
+      margin-bottom: 2rem;
     }
 
     .subtitle-compact {
@@ -125,7 +125,7 @@
 
     @media (min-width: 640px) {
       .header-landing {
-        padding-top: 1.5rem;
+        padding-top: clamp(2rem, 8vh, 5rem);
       }
 
       .header-compact {
@@ -172,7 +172,7 @@
           id="subtitle">Find Research Papers That <strong class="font-bold text-ink dark:text-paper">Actually Matter</strong></p>
       </div>
 
-      <div class="w-full max-w-xl transition-transform duration-[250ms] ease-in-out will-change-transform"
+      <div class="w-full max-w-4xl transition-transform duration-[250ms] ease-in-out will-change-transform"
         id="search-container">
         <form id="search-form" class="w-full">
           <div
@@ -195,7 +195,7 @@
         </form>
 
         <div id="search-hints"
-          class="mt-2 ml-1 pl-4 flex flex-wrap items-center gap-x-2 text-[0.8rem] sm:text-[0.9rem] text-ink/55 dark:text-paper/55 font-serif italic opacity-100 transition-opacity duration-200 ease-in-out border-l border-ink/10 dark:border-paper/10">
+          class="mt-3 ml-1 pl-4 flex flex-wrap items-center gap-x-2 text-[0.8rem] sm:text-[0.9rem] text-ink/55 dark:text-paper/55 font-serif italic opacity-100 transition-opacity duration-200 ease-in-out border-l border-ink/10 dark:border-paper/10">
           <span class="shrink-0 opacity-70">try:</span>
           <!-- Rotating example drum - rows are filled by startExampleDrum() in js/ui.js -->
           <div id="example-drum" class="drum-window flex-1 min-w-0" role="group" aria-roledescription="carousel"
@@ -208,7 +208,7 @@
         </div>
 
         <div id="filter-container"
-          class="flex flex-col gap-2 sm:gap-3 mt-3 sm:mt-4 transition-[opacity,transform] duration-[250ms] ease-in-out">
+          class="flex flex-col gap-2.5 sm:gap-4 mt-5 sm:mt-7 transition-[opacity,transform] duration-[250ms] ease-in-out">
           <div class="flex items-start gap-x-3">
             <label
               class="shrink-0 w-12 sm:w-14 pt-[0.6rem] text-[0.625rem] sm:text-[0.7rem] uppercase tracking-[0.2em] text-ink/60 dark:text-paper/60 font-bold">Venue</label>
@@ -231,7 +231,7 @@
 
     <div class="flex-grow flex flex-col">
       <section id="results-section"
-        class="hidden opacity-0 translate-y-4 invisible transition-[opacity,transform] duration-[250ms] pt-6 sm:pt-8 flex-1 will-change-[opacity,transform] max-w-3xl mx-auto w-full">
+        class="hidden opacity-0 translate-y-4 invisible transition-[opacity,transform] duration-[250ms] pt-6 sm:pt-8 flex-1 will-change-[opacity,transform] max-w-4xl mx-auto w-full">
         <div class="py-2 mb-4">
           <h2 id="results-count"
             class="font-masthead italic text-base sm:text-lg font-bold text-center text-ink/60 dark:text-paper/60"></h2>
@@ -242,7 +242,7 @@
 
       <!-- Purpose Loop / Help Text -->
       <div id="purpose-section"
-        class="flex flex-col items-center justify-start text-center transition-opacity duration-200 ease-in-out [perspective:1000px] pt-0">
+        class="flex flex-col items-center justify-start text-center transition-opacity duration-200 ease-in-out [perspective:1000px] pt-6 sm:pt-10">
         <p id="purpose-text"
           class="italic text-[0.7rem] sm:text-[0.85rem] text-ink/40 dark:text-paper/40 font-serif min-h-[4rem] sm:min-h-[6rem] max-w-sm mx-auto leading-relaxed transition-[opacity,transform] duration-[220ms] ease-in-out will-change-transform relative">
           <!-- Dynamically populated loop -->
