@@ -10,7 +10,7 @@ A high-performance, monochromatic research search engine for AI/ML and medical i
 - **🌓 Adaptive Themes**: Automatic Light/Dark mode transitions based on local sunrise/sunset.
 - **🔢 LaTeX Support**: Integrated KaTeX for rendering complex mathematical abstracts.
 - **🚀 Static Architecture**: Optimized for GitHub Pages with zero-server dependency in production.
-- **ℹ️ About Page**: [`about.html`](https://abhisheksambyal.com/papersift/about.html) explains the tool, its search syntax, and its live coverage table (generated from `data/config.json`, so the numbers never go stale).
+- **ℹ️ About Page**: [`about.html`](https://papersift.github.io/about.html) explains the tool, its search syntax, and its live coverage table (generated from `data/config.json`, so the numbers never go stale).
 
 ## 📚 Conference Coverage
 
